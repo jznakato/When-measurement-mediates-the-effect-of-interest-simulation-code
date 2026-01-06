@@ -7,6 +7,9 @@
 # - j : jth cluster. j=1,2...J
 # - verbose: whether to print summary stats and histograms for propensity scores (TRUE or FALSE)
 ## output: A dataset containing individual level variables and cluster-level variables for each cluster
+## Update from original manuscript :
+# Changed get.Y2 function by reducing the E1 in response to reviewer
+# Added a simple get.delta.simple function for a simpler missingness mechanism upon reviewer's request
 #======================================================================================================
 generate.cluster <- function(dgp, effect, N, j, verbose){
   

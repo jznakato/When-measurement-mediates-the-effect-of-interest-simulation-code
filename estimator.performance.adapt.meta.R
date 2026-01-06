@@ -13,6 +13,9 @@
 # output: 
 #		variance, test statistic, confidence intervals, pval, indicator reject null
 # 		note: if goal=aRR, variance & test stat are on log-scale
+## Updates from original manuscript
+# Added a get.inference.1 function
+# Added GEE estimators and estimators for risk ratios
 ##=======================================================================================================
 # function for getting inference for Risk ratio estimators
 get.inference.1<- function(goal='RD', psi=NA, psi.hat, se, df=99, sig.level=0.05, 
