@@ -220,18 +220,6 @@ do_screening <- function(train.temp, screener, forQ=T, doing.CV, verbose=F){
   
   names_X <- names(X)
   
-  if(forQ){
-    
-    # make sure 'ANC' and 'OPD' are included
-    if(!'ANC' %in% names_X & sum(train.temp$ANC)>0 ){
-      names_X <-  c('ANC', names_X)
-      if(!doing.CV & verbose) print('****forcing adjustment for ANC****')
-    }
-    if(!'OPD' %in% names_X & sum(train.temp$OPF)>0 ){
-      names_X <- c('OPD', names_X)
-      if(!doing.CV & verbose) print('****forcing adjustment for OPD****')
-    }
-  }
   names_X
 }
 

@@ -1,88 +1,5 @@
 
 ##=======================================================================================================
-# get.inference.1: function to calculate two-sided confidence intervals
-#     & test the null hypothesis with a one-sided test
-#	input: 
-#		goal (aRR= arithmetic risk ratio; otherwise RD)
-#   psi (true value)
-#   psi.hat (estimate)
-#   se (standard error)
-#		df (degrees of freedom if using a Student's t-dist ) 
-#		sig.level (significance level)
-#   one.sided (if one-sided test)
-# output: 
-#		variance, test statistic, confidence intervals, pval, indicator reject null
-# 		note: if goal=aRR, variance & test stat are on log-scale
-## Updates from original manuscript
-# Added a get.inference.1 function
-# Added GEE estimators and estimators for risk ratios
-##=======================================================================================================
-# function for getting inference for Risk ratio estimators
-get.inference.1<- function(goal='RD', psi=NA, psi.hat, se, df=99, sig.level=0.05, 
-                          one.sided=F, alt.smaller=NULL){
-  
-  # if doing a one-sided test, need to specify the alternative
-  # alt.smaller=T if intervention reduces mean outcome
-  # alt.smaller=F if intervention increases mean outcome
-  if(one.sided & is.null(alt.smaller)){
-    print('*****ERROR: For one-sided test, need to specify the direction of the hypo')
-  }
-  
-  # test statistic (on the log-transformed scale if goal= aRR or OR )
-  tstat <- psi.hat/se
-  
-  if(df>40){
-    # assume normal distribution
-    cutoff <- qnorm(sig.level/2, lower.tail=F)
-    # one.sided hypothesis test 
-    if(one.sided){
-      pval<- pnorm(tstat, lower.tail=alt.smaller) 
-    } else{
-      pval<- 2*pnorm(abs(tstat), lower.tail=F) 
-    }
-  }else{
-    # use Student's t-distribution
-    # print('Using t-distribution')
-    cutoff <- qt(sig.level/2, df=df, lower.tail=F)
-    # one.sided hypothesis test 
-    if(one.sided){
-      pval <- pt(tstat, df=df, lower.tail= alt.smaller ) 
-    } else{
-      pval <- 2*pt(abs(tstat), df=df, lower.tail=F)
-    }
-  }
-  
-  
-  
-  # 95% confidence interval 
-  CI.lo <- (psi.hat - cutoff*se)
-  CI.hi <- (psi.hat + cutoff*se)
-  
-  # transform back 
-  if(goal=='aRR'){
-    psi.hat<- exp(psi.hat)
-    CI.lo <- exp(CI.lo)
-    CI.hi <- exp(CI.hi)
-    bias<-(psi.hat/psi)
-  }else{ 
-  psi.hat<-psi.hat
-  # bias
-  bias <- (psi.hat - psi)
-  
-  # 95% confidence interval 
-  CI.lo <- (psi.hat - cutoff*se)
-  CI.hi <- (psi.hat + cutoff*se)
-  }
-  # confidence interval coverage
-  cover<- ( CI.lo <= psi & psi <= CI.hi )
-  # reject the null
-  reject <- as.numeric( pval < sig.level  )
-  
-  data.frame(est=psi.hat,  CI.lo, CI.hi, se=se,  pval, bias, cover, reject)
-  
-}
-
-##=======================================================================================================
 
 # looper: Function that iterates over a full data set, estimating the cluster-level end points in stage 1 
 # and treatment effect in stage 2
@@ -155,9 +72,6 @@ looper<- function(dpg, J, N.mean, N.sd, effect,
   
   tmle_unadj_RD<- Stage2(goal="RD", target=target, data.input=data.input,
                       do.unadjusted=T, psi=Psi.P0.RD)
-  
-  tmle_unadj_RR<- Stage2(goal="aRR", target=target, data.input=data.input,
-                      do.unadjusted=T, psi=Psi.P0.RR)
  
  # tmle-tmle (tmle with SL in stage 1 and tmle with APS in stage 2)
   data.input <- cbind(Yc[,c(clust.var, 'W1','W2','W3')], Y=Yc$tmle_pt)
@@ -167,12 +81,7 @@ looper<- function(dpg, J, N.mean, N.sd, effect,
                       do.data.adapt =T, remove.pscore=T, 
                       cand.QAdj=W, cand.Qform='glm', cand.gAdj=W, cand.gform='glm',
                       verbose=F, psi=Psi.P0.RD)
-  
-  
-  tmle_tmle_RR <- Stage2(goal="aRR", target=target, data.input=data.input,
-                      do.data.adapt =T, remove.pscore=T, 
-                      cand.QAdj=W, cand.Qform='glm', cand.gAdj=W, cand.gform='glm',
-                      verbose=F, psi=Psi.P0.RR)
+
 ##do the vanilla approach
 ##Fit LTMLE among those who are measured and at risk. 
   data_sub<-O[O$Delta==1 & O$Y1==0,] #when you subset your obs this doesnot subset the id vector
@@ -191,7 +100,7 @@ psi.hat<-summ$effect.measures$ATE$estimate
  standard<-data.frame(est=psi.hat,  CI.lo, CI.hi, se=se,  pval, bias, cover, reject)
 
   
-#########  ADDING  STANDARDIZED GEE ESTIMATORS (AMONG MEAUSRED/AMONG MEAUSRED ELIGIBLE)
+#########  ADDING  STANDARDIZED GEE ESTIMATORS (AMONG MEAUSRED)
  
  ##: We used the MRStdCRT package to implement a standardized GEE estimator for the RD and RR that 
  ## returns the CLUSTER-level effect
@@ -233,100 +142,13 @@ bias <- (psi.hat - Psi.P0.RD)
 GEE_std_RD<-data.frame(est=psi.hat,  CI.lo, CI.hi, se=se,  pval, bias, cover, reject)
 
 
-## RISK RATIO
-GEE_mod <-MRStdCRT::MRStdCRT_fit(
-  formula = Y2~ A+ W1 + W2+ W3 + E1 + E2 +
-    + n,
-  data =  data_std,
-  cluster = "cluster",
-  trt = "A",
-  trtprob = prob,
-  family=binomial(link = "logit"),
-  method = "GEE",
-  corstr = "independence",
-  scale = "RR"
-)
-psi.hat<-GEE_mod$estimate$Estimate[1]
-pval<-GEE_mod$estimate$`p-value`[1]
-se<-GEE_mod$estimate$`Std. Error`[1]
-CI.lo<-GEE_mod$estimate$`CI lower`[1]
-CI.hi<-GEE_mod$estimate$`CI upper`[1]
-cover<- (CI.lo<Psi.P0.RR ) & (Psi.P0.RR <CI.hi)
-reject <- as.numeric( pval < 0.05  )
-bias <- (psi.hat / Psi.P0.RR)
-GEE_std_RR<-data.frame(est=psi.hat,  CI.lo, CI.hi, se=se,  pval, bias, cover, reject)
-
-
-# ADDING RISK RATIO ESTIMATORS
-
-# GEE: Generalized estimating equations 
-library(geepack)
-do.gee <- function(train, ind.cov, psi, paired=F, link, dropM=F){
-  
-  N <- sum(!duplicated(train$id))
-  id <- train$id
-  pair <- train$pair
-  if(paired){
-    train$pair <- as.factor(train$pair)
-    train <- train[, c('pair', ind.cov, 'A', 'Y')]
-  }else{
-    train <- train[, c(ind.cov, 'A', 'Y')]
-  }
-  m <- geeglm(Y~ ., data=train, family=link, id=id)
-  psi.hat<- coef(m)['A']
-  se <- summary(m)$coefficients['A', 'Std.err']
-  get.inference.1(goal='aRR', psi=psi, psi.hat=psi.hat, se=se, df=NA)
-}
-
-
-
-# MIXED MODELS (a.k.a., random effect models)
-library('lme4')
-do.mixed.models <- function(train, paired=F, psi, link, do.complex, dropM=F){
-  
-  N <- sum(!duplicated(train$id))
-
-   
-      m <-  glmer(Y2~ A+ W1 +W2 + W3 + E1 + E2 + (1 | id),
-                  data=train, family=link ) 
-  
-  psi.hat <- summary(m)$coef['A','Estimate']
-  se <- summary(m)$coef['A','Std. Error']
-  get.inference.1(goal='aRR', psi=psi, psi.hat=psi.hat, se=se, df=99)
-}
-
-GLMM_std_RR <- do.mixed.models(train=O, psi=Psi.P0.RR, link="poisson")
-
-
-# DOUBLE-ROBUST GEE (DR-GEE)
-library('CRTgeeDR')
-do.gee.aug <- function(train, psi, link){
-  N <- sum(!duplicated(train$id))
-  train[train$Delta==0,'Y1']<- NA
-
-    out <- geeDREstimation(formula=Y2~A, nameY='Y2', id='id', nameTRT='A', nameMISS='Delta',
-                           data=train, family=link, 
-                           model.augmentation.ctrl = Y2~ W1 + W2 + W3 + E1 + E2,
-                           model.augmentation.trt = Y2 ~ W1 + W2 + W3 + E1 + E2,
-                           model.weights = Delta ~ W1 + W2+ W3 ) ##removed A and Es
-  
-  psi.hat <- summary(out)$beta[2]
-  se <- summary(out)$se.robust[2]    
-  get.inference.1(goal='aRR', psi=psi, psi.hat=psi.hat, se=se, df=N ) 
-
-}
-
-aug_RR <- do.gee.aug(train=O, psi=Psi.P0.RR, link="poisson")
-
-
 
   return( list(standard=standard,GEE_std_RD=GEE_std_RD,
-               GEE_std_RR=GEE_std_RR,
-               GLMM_std_RR=GLMM_std_RR,aug_RR=aug_RR,raw_all_unadj=raw_all_unadj, 
+               raw_all_unadj=raw_all_unadj, 
                raw_eligible_unadj=raw_eligible_unadj,
                unadj_unadj=unadj_unadj, 
                glm_unadj=glm_unadj,  glm_glm=glm_glm,
-               tmle_unadj_RD=tmle_unadj_RD, tmle_tmle_RD=tmle_tmle_RD, 
-               tmle_unadj_RR=tmle_unadj_RR, tmle_tmle_RR=tmle_tmle_RR))
+               tmle_unadj_RD=tmle_unadj_RD, tmle_tmle_RD=tmle_tmle_RD 
+              ))
 }
 

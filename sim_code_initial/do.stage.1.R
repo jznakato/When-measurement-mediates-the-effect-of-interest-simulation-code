@@ -44,11 +44,11 @@ glm <- get_denominator_ratio(Oc, estimator='glm', ind.cov=ind.cov,
 tmle <- get_denominator_ratio(Oc, estimator='tmle', ind.cov=ind.cov, SL.library=SL.library,
                                   Psi_num=Psi_num, IC_num=IC_num)
     
-# "raw_all": P(Y2=1 | Delta=1) - this does not have a numerator/denominator
+# "raw_all" ("Screened"): P(Y2=1 | Delta=1) - this does not have a numerator/denominator
 # this estimates a different parameter - does not account for eligibility 
 raw_all <- among_linkers(Oc, among_eligible=F)
     
-# "raw_eligible": P(Y2=1 | Delta=1, Y1=0
+# "raw_eligible"("eligible"): P(Y2=1 | Delta=1, Y1=0
 raw_eligible <- among_linkers(Oc, among_eligible=T)
   
     temp <- cbind(Oc[1, clust.var], W1=mean(Oc$W1),  W2=mean(Oc$W2),  W3=mean(Oc$W3),
@@ -108,7 +108,6 @@ get_denominator_ratio <- function(Oc, estimator, ind.cov, SL.library,
     
     tmle_den<- suppressMessages(ltmle(data=Oc.sub, Anodes='Delta', Ynodes='Y1', abar=1 ,
                                       SL.library=SL.library,
-                                      #SL.cvControl=list(V=5L),
                                       estimate.time=F, stratif=T))
   } 
   

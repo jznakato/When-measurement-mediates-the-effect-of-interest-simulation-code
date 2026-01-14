@@ -38,16 +38,11 @@ generate.cluster <- function(dgp, effect, N, j, verbose){
                                 UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
     Delta.0 <- get.delta.simple(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
                                 UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-  } else if(dgp=='complex'){
+  } else{
     Delta.1 <- get.delta.complex(A=1, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
                                  UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
     Delta.0 <- get.delta.complex(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3,
                                  UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-  } else if(dgp=='lb'){
-    Delta.1 <- get.delta.lb(A=1, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
-                            UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-    Delta.0 <- get.delta.lb(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
-                            UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
   }  
   }else{
     
@@ -55,15 +50,11 @@ generate.cluster <- function(dgp, effect, N, j, verbose){
      
       Delta.0 <- get.delta.simple(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
                                   UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-    } else if(dgp=='complex'){
+    } else{
      
       Delta.0 <- get.delta.complex(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3,
                                    UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-    } else if(dgp=='lb'){
-   
-      Delta.0 <- get.delta.lb(A=0, E1=E1, E2=E2, W1=W1,W2=W2, W3=W3, 
-                              UE1=UE1, UE2=UE2, U.Delta=U.Delta, verbose=verbose)
-    }
+    } 
     Delta.1<-Delta.0
   }
   
@@ -83,6 +74,7 @@ generate.cluster <- function(dgp, effect, N, j, verbose){
 # However, In manuscript Y1=1 is indicator of being at risk. 
   
 #  generate outcome Y2 (uptake of PREP/PEP)
+
   U.Y2 <- runif(N, 0, 1)
   
   Y2.0 <- get.Y2(A=0, W1=W1, W2=W2, W3=W3, E1=E2, E2=E2, UE1=UE1, UE2=UE2,
@@ -104,16 +96,9 @@ generate.cluster <- function(dgp, effect, N, j, verbose){
 
 
 
-get.delta.lb <- function(A,E1,E2,W1,W2,W3, UE1, UE2, U.Delta, verbose=F) {
-   pscore_delta <- plogis(0.1 + 2*A- 2*W1  + 0.99*W2*A +0.75*W3 - 0.75*E1 + 0.85*E2 - 0.5*UE1 +0.5*UE2 ) 
-  if(verbose) { print(summary(pscore_delta)); hist(pscore_delta) }
-  Delta <- as.numeric(U.Delta < pscore_delta) 
-## is the same way of saying probability of measurement is given by pscore_delta
-   Delta
-  
-}
+## For each cluster, get.delta is a simpler bifurcating function with main terms and no interactions. 
+## NOTE:  Once we stratify on each cluster, this function reduces to a simple linear function with main terms. 
 
-## For each cluster, get.delta is a simpler complex linear function with main terms and no interactions
 get.delta.simple<- function(A, E1, E2, W1, W2, W3, UE1, UE2, U.Delta, verbose=F) {
 
   pscore_delta <- A*plogis(1 + 0.5*W1  - 1.5*W2  + 0.3*W3 + 2*UE1 ) + (1-A)*plogis(-0.1 + 0.5*W1 +1.05*W2  - 0.3*W3 - 2*UE1 )
@@ -143,12 +128,15 @@ if(verbose) { print(summary(pscore_delta)); hist(pscore_delta) }
 # misisngness mechanism depends on unobserved UEs but we still take care of this using 2 stage tmle
 # UEs are confounders of Y1*star and Delta . in a sinlge stage we would not have identification
 
+# NOTE: Generating Y2 as a function of Y1_star and Delta is equivalent to generating Y2
+# as a function of observed Y1.
+
 get.Y2 <- function(A, W1, W2, W3, E1, E2, UE1, UE2, Y1_star, Delta, U.Y2, verbose=F){
   
   
 # calculating the probability of starting PrEP once one links (if HIV-)
   
-p.Y2 <- plogis(0.2 + 0.08*A + 0.5*W1 + 0.4*W2 -1*E1 + .87*E2 - 0.08*A*W3 - 0*UE1 +0*E2 )  ##reduce the effect of E1 (main review)
+p.Y2 <- plogis(0.2 + 0.08*A + 0.5*W1 + 0.4*W2 -1*E1 + .87*E2 - 0.08*A*W3)  ##reduce the effect of E1 (main review)
 
 
   if(verbose) { print(summary( p.Y2)); hist(p.Y2) }
@@ -173,7 +161,7 @@ p.Y2 <- plogis(0.2 + 0.08*A + 0.5*W1 + 0.4*W2 -1*E1 + .87*E2 - 0.08*A*W3 - 0*UE1
 # effect: TRUE or FALSE
 ## Output: Full dataset including counterfactuals
 ## =====================================================================================================
-get.full.data <- function(dgp, J=64, N.mean=100, N.sd=20, effect=effect, verbose=F){
+get.full.data <- function(dgp, J=64, N.mean=100, N.sd=10, effect=effect, verbose=F){
   
   n.indv<- round(rnorm(J, N.mean, N.sd))
   if(N.mean >=30){
@@ -215,7 +203,7 @@ full.data
 ## =====================================================================================================
 ## get.truth: Generates the true individual level and cluster-level effects
 ## =====================================================================================================
-get.truth <- function(dgp, J, N.mean=200, N.sd=20, effect,verbose=F){
+get.truth <- function(dgp, J, N.mean=200, N.sd=10, effect,verbose=F){
   
 full.data<-get.full.data(dgp=dgp, J=J, N.mean=N.mean, N.sd=N.sd, effect=effect, verbose=F)
 
