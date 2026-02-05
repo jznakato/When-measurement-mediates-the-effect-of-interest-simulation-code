@@ -33,12 +33,11 @@ N_mean <- 200
 N_sd <- 10
 
 #  specify the DGP
-dgp <- "main"
+dgp <- "null"
 
 calculate_causal_estimand <- F
 
 J_truth <- 5000
-#this_date <- '_31jan2026'
 this_date <- '_2feb2026'
 file_truth <- paste0('truth_dgp_', dgp, '_J', J_truth, this_date, '.Rdata')
 # 
@@ -59,7 +58,7 @@ verbose=F
 SL.library <- NULL
 # SL.library<- c("SL.glm", "SL.earth", "SL.mean")
 
-J <- 70 # 100, 150
+J <- 70
 
 R <- 1000
 
@@ -82,10 +81,16 @@ for(r in 1:R){
   stmle_ratio <- rbind(stmle_ratio, out$stmle_ratio)
   print(r)
 }
-save(screened,  eligible,  unadj, tmle, tmle_tmle,  
-       gee, stmle_eligible, stmle_ratio, 
+
+# reformat TMLE-TMLE with CV variance
+# these are the only columns that we really need
+tmle_tmle_cv <- tmle_tmle[,c("CV.est","CV.CI.lo","CV.CI.hi","CV.se", "CV.pval")]
+colnames(tmle_tmle_cv) <- c('est', 'CI.lo', 'CI.hi', 'se', 'pval')
+save(screened,  eligible, unadj, tmle, tmle_tmle,  tmle_tmle_cv,
+     gee, stmle_eligible, stmle_ratio,
      generate_cluster, get_delta, get_Y2,
      file=file_out)
+
 
 these_cols <- c('bias','cover', 'reject')
 print( colMeans(screened[,these_cols]))

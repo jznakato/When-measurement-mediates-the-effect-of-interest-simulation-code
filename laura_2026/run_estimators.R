@@ -34,7 +34,7 @@ looper<- function(dpg, J, N_mean, N_sd, psi=NULL,
   # do stage2
   goal <- 'RD' # absolute scale
   target <- 'clust' # weighting clusters equally
-  psi <- mean(Yc$Yc1) - mean(Yc$Yc0) #sample effect
+  # psi <- mean(Yc$Yc1) - mean(Yc$Yc0) #sample effect
   
   # screened-unadjusted
   data.input <- cbind(Yc[,c('id','alpha','U','A')], Y=Yc$screened)

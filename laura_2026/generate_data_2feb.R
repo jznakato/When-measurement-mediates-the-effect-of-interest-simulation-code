@@ -1,5 +1,4 @@
-# Code by Joy Nakato 
-# With review/editing by Laura Balzer
+# Code by Joy Nakato and Laura Balzer
 
 
 ## =====================================================================================================
@@ -52,7 +51,7 @@ get_full_data <- function(dgp, J=50, N_mean=200, N_sd=10, verbose=F){
 ## Input
 # - dgp: simple or complex 
 # - N : The cluster size i.e number of individuals within each cluster
-# - j : jth cluster. j=1,2...J
+# - j : jth cluster. j=1,2...,J
 # - verbose: whether to print summary stats and histograms for propensity scores 
 ## Output: 
 # - Dataset containing individual-level variables and cluster-level variables for each cluster
@@ -111,11 +110,10 @@ generate_cluster <- function(dgp, N, j, verbose){
 get_delta<- function(dgp, A, E1, E2, W1, W2, W3, UE1, UE2, UDelta, verbose=F) {
   
   if(dgp=='main'){
-    # # increase the strength of A - 1feb2026
     pscore_delta <- plogis(-.5+.6*A+0.5*W1+0.4*W2-0.4*A*W3+0.4*(1-A)*W3+0.1*UE1+0.1*UE2) 
   } else {
-      # this was looking good psi= -0.0175192 - 31jan2026
-      pscore_delta <- plogis(-1+.4*A+0.5*W1+0.5*W2-0.3*A*W3 + 0.3*(1-A)*W3) 
+    # under the null
+    pscore_delta <- plogis(-.5+0.5*W1+0.4*W2+0.1*UE1+0.1*UE2) 
   }
   if(verbose) { print(summary(pscore_delta)); hist(pscore_delta) }
   Delta <- as.numeric(UDelta < pscore_delta)
@@ -136,7 +134,8 @@ get_Y2 <- function(dgp, A, W1, W2, W3, E1, E2, UE1, UE2,
   if(dgp=='main'){
     pY2 <- plogis(0.2+0.1*A+1*W1+0.5*W2+2*W3+0.2*E1+0.2*E2)   
   } else{
-    pY2 <- plogis(0.2-0.1*A+1*W1+0.5*W2-2*W3+0.2*E1+0.2*E2)    
+    # under the null
+    pY2 <- plogis(0.2+1*W1+0.5*W2-2*W3+0.2*E1+0.2*E2)    
   }
   if(verbose) { print(summary( pY2)); hist(pY2) }
   
